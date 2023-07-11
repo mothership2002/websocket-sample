@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat</title>
+    <style>
+        #messageArea {
+            height: 300px;
+            overflow-y: scroll;
+        }
+    </style>
+</head>
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+<body>
+    <div id="messageArea"></div>
+    <input type="text" id="nickname"/>
+    <input type="text" id="messageInput"/>
+    <button onclick="sandMessage()">Send</button>
+
+    <script>
+        let stompClient = null;
+        const messageInput = document.getElementById("messageInput");
+        const nicknameInput = document.getElementById("nickname");
+        const messageArea = (data) => {
+            const messageArea = document.getElementById("messageArea");
+            messageArea.innerHTML += "<p>" + data.nickname + ":" + data.message + "</p>";
+        }
+
+        const disconnect = () => {
+            if (stompClient !== null) {
+                stompClient.disconnect();
+            }
+            console.log("Disconnected");
+        }
+
+        const sandMessage = () => {
+            const message = messageInput.value;
+            const nickname = nicknameInput.value
+            stompClient.send("/hello/chatting",
+                            {},
+                            JSON.stringify({
+                                'message' : message,
+                                'nickname' : nickname
+                            }
+                        ));
+            messageInput.value = '';
+        }
+
+        (() => {
+            const socket = new SockJS('/chat-window/example');
+            stompClient = Stomp.over(socket);
+            stompClient.connect({}, (frame) => {
+                console.log('frame' , frame);
+                stompClient.subscribe('/topic/hello', (data) => {
+                    console.log('data', data);
+                    messageArea(JSON.parse(data.body));
+                    
+                })
+            })
+        })()
+    </script>
+</body>
+</html>
